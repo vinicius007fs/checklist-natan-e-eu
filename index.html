@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -225,4 +226,231 @@
     </script>
 </body>
 
+=======
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checklist Operacional</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="page">
+        <header>
+            <h1>Checklist de Tarefas e Limpeza</h1>
+            <p style="color: var(--muted); margin: 0;">Organize, encaminhe e registre o horário das execuções.</p>
+        </header>
+
+        <section class="card">
+            <h2>Informações Gerais</h2>
+            <div class="fields">
+                <label class="field">Local / Condomínio / Casa
+                    <input type="text" id="infoLocal" placeholder="Ex: Apartamento 302, Condomínio Sul">
+                </label>
+                <label class="field">Data
+                    <input type="date" id="infoData">
+                </label>
+                <label class="field">Responsável pela criação
+                    <input type="text" id="infoCriador" placeholder="Quem criou o checklist">
+                </label>
+                <label class="field">Responsável pela execução
+                    <input type="text" id="infoExecutor" placeholder="Quem vai executar">
+                </label>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Tarefas a Realizar</h2>
+            <div class="add-task-row">
+                <input type="text" id="novaTarefaTexto" placeholder="Ex: Limpar o quarto, passar pano na sala...">
+                <button class="primary" onclick="adicionarTarefaManual()">Adicionar</button>
+            </div>
+
+            <div id="listaTarefas" class="checklist-container"></div>
+            <div class="progress" id="indicadorProgresso">0 de 0 tarefas concluídas</div>
+        </section>
+
+        <section class="card">
+            <h2>Observações Gerais</h2>
+            <textarea id="observacoes" rows="3" style="width: 100%; box-sizing: border-box;"
+                placeholder="Insira detalhes adicionais, problemas encontrados ou orientações..."></textarea>
+        </section>
+
+        <div class="buttons">
+            <button class="primary" onclick="copiarLinkCompartilhavel()">🔗 Copiar Link para Enviar</button>
+            <button class="secondary" onclick="salvarPreenchimento()">Baixar Arquivo</button>
+            <button class="secondary" onclick="window.print()">Imprimir / PDF</button>
+            <button class="warning" onclick="limparTudo()">Limpar Tudo</button>
+        </div>
+    </div>
+
+    <script>
+        let tarefas = [
+            { texto: "Limpar e organizar o quarto", concluido: false, hora: "" },
+            { texto: "Varrer e passar pano no chão", concluido: false, hora: "" },
+            { texto: "Higienizar banheiros", concluido: false, hora: "" },
+            { texto: "Recolher os lixos e trocar sacos", concluido: false, hora: "" }
+        ];
+
+        function inicializarDados() {
+            document.getElementById("infoData").value = new Date().toISOString().split("T")[0];
+
+            // Recupera parâmetros da URL se tiverem sido enviados via link
+            const params = new URLSearchParams(window.location.search);
+            const dadosCodificados = params.get("dados");
+
+            if (dadosCodificados) {
+                try {
+                    const payload = JSON.parse(decodeURIComponent(escape(atob(dadosCodificados))));
+                    if (payload.local) document.getElementById("infoLocal").value = payload.local;
+                    if (payload.data) document.getElementById("infoData").value = payload.data;
+                    if (payload.criador) document.getElementById("infoCriador").value = payload.criador;
+                    if (payload.executor) document.getElementById("infoExecutor").value = payload.executor;
+                    if (payload.obs) document.getElementById("observacoes").value = payload.obs;
+                    if (Array.isArray(payload.tarefas)) tarefas = payload.tarefas;
+                } catch (e) {
+                    console.error("Falha ao ler parâmetros da URL", e);
+                }
+            }
+            renderizarLista();
+        }
+
+        function renderizarLista() {
+            const container = document.getElementById("listaTarefas");
+            container.innerHTML = "";
+
+            tarefas.forEach((tarefa, idx) => {
+                const item = document.createElement("div");
+                item.className = `check-item ${tarefa.concluido ? 'done' : ''}`;
+
+                const left = document.createElement("div");
+                left.className = "task-left";
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = tarefa.concluido;
+                checkbox.addEventListener("change", (e) => {
+                    tarefa.concluido = e.target.checked;
+                    if (tarefa.concluido && !tarefa.hora) {
+                        const agora = new Date();
+                        const h = String(agora.getHours()).padStart(2, '0');
+                        const m = String(agora.getMinutes()).padStart(2, '0');
+                        tarefa.hora = `${h}:${m}`;
+                    } else if (!tarefa.concluido) {
+                        tarefa.hora = "";
+                    }
+                    renderizarLista();
+                });
+
+                const span = document.createElement("span");
+                span.textContent = tarefa.texto;
+                left.append(checkbox, span);
+
+                const timeBox = document.createElement("div");
+                timeBox.className = "task-time-box";
+
+                const timeLabel = document.createElement("span");
+                timeLabel.textContent = "Horário:";
+
+                const timeInput = document.createElement("input");
+                timeInput.type = "time";
+                timeInput.className = "time-input";
+                timeInput.value = tarefa.hora || "";
+                timeInput.addEventListener("input", (e) => {
+                    tarefa.hora = e.target.value;
+                });
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.className = "btn-delete";
+                deleteBtn.textContent = "✕";
+                deleteBtn.title = "Remover tarefa";
+                deleteBtn.onclick = () => {
+                    tarefas.splice(idx, 1);
+                    renderizarLista();
+                };
+
+                timeBox.append(timeLabel, timeInput, deleteBtn);
+                item.append(left, timeBox);
+                container.appendChild(item);
+            });
+
+            const concluidos = tarefas.filter(t => t.concluido).length;
+            document.getElementById("indicadorProgresso").textContent = `${concluidos} de ${tarefas.length} tarefas concluídas`;
+        }
+
+        function adicionarTarefaManual() {
+            const input = document.getElementById("novaTarefaTexto");
+            const texto = input.value.trim();
+            if (!texto) return;
+
+            tarefas.push({ texto: texto, concluido: false, hora: "" });
+            input.value = "";
+            renderizarLista();
+        }
+
+        function obterEstadoAtual() {
+            return {
+                local: document.getElementById("infoLocal").value,
+                data: document.getElementById("infoData").value,
+                criador: document.getElementById("infoCriador").value,
+                executor: document.getElementById("infoExecutor").value,
+                obs: document.getElementById("observacoes").value,
+                tarefas: tarefas
+            };
+        }
+
+        function copiarLinkCompartilhavel() {
+            const payload = obterEstadoAtual();
+            const stringJSON = JSON.stringify(payload);
+            const base64 = btoa(unescape(encodeURIComponent(stringJSON)));
+            const urlBase = window.location.origin + window.location.pathname;
+            const linkFinal = `${urlBase}?dados=${base64}`;
+
+            navigator.clipboard.writeText(linkFinal).then(() => {
+                alert("Link copiado para a área de transferência! Envie pelo WhatsApp ou chat para a outra pessoa.");
+            }).catch(() => {
+                prompt("Copie o link abaixo para enviar:", linkFinal);
+            });
+        }
+
+        function salvarPreenchimento() {
+            const copia = document.documentElement.cloneNode(true);
+            const originais = document.querySelectorAll('input, textarea');
+            const copiados = copia.querySelectorAll('input, textarea');
+
+            originais.forEach((orig, i) => {
+                const el = copiados[i];
+                if (!el) return;
+                if (orig.type === 'checkbox') {
+                    orig.checked ? el.setAttribute('checked', 'checked') : el.removeAttribute('checked');
+                } else if (orig.tagName === 'TEXTAREA') {
+                    el.textContent = orig.value;
+                } else {
+                    el.setAttribute('value', orig.value);
+                }
+            });
+
+            const blob = new Blob(['<!DOCTYPE html>\n' + copia.outerHTML], { type: 'text/html;charset=utf-8' });
+            const link = document.createElement('a');
+            const data = document.getElementById('infoData').value || 'checklist';
+            link.href = URL.createObjectURL(blob);
+            link.download = `checklist_${data}.html`;
+            link.click();
+        }
+
+        function limparTudo() {
+            if (!confirm("Deseja apagar todas as tarefas e campos?")) return;
+            tarefas = [];
+            document.querySelectorAll('input[type="text"], textarea').forEach(i => i.value = "");
+            renderizarLista();
+        }
+
+        inicializarDados();
+    </script>
+</body>
+
+>>>>>>> 911ac551b401ff7f835a2fd6f965f92cc7e07082
 </html>
